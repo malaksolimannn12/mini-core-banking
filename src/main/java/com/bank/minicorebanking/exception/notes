@@ -1,0 +1,96 @@
+ya3ni delwa2ty ana fy kol class b expect el problems ely momken tehsal ma3 el code zay maslan law ana ba3ml create account momken alreeady el acoount dah yekon exsisted 3andi fel data base fa ana ba3mel throw lel problems ba3diha spring byst2blha lama spring hwa ely byst2bel el el throwed exception law sebt spring hwa ely yesta2bel el throwed exseption spribg byrag3li response ,,,,json response {
+
+  "timestamp": "...",
+
+  "status": 500,
+
+  "error": "Internal Server Error",
+
+  "path": "/customers/5"
+
+} if the settings was server.error.include-message=always sa3tha momken yexharli el massege ely ana katbtha {
+
+  "status":500,
+
+  "message":"Customer not found"
+
+} fa ely spring hwa ely bykrar shakl el response w 3alshan ahel el moshkela di ba3mel Globel exception handling  CustomerService
+
+      │
+
+      │ throw RuntimeException
+
+      ▼
+
+GlobalExceptionHandler
+
+      │
+
+      ▼
+
+أنا أحدد الـ Response
+fa lama el globel exception bysta2bel el exception ely hasalo throw by3mel eh
+هو بياخد الـ Exception ويحوله إلى HTTP Response مناسب يبعته للـ Client (Postman أو Frontend).
+ostman
+    │
+    ▼
+Controller
+    │
+    ▼
+Service
+    │
+    ▼
+throw Exception
+    │
+    ▼
+Global Exception Handler
+    │
+    ├── يقرأ نوع الـ Exception
+    ├── يحدد HTTP Status
+    ├── يبني JSON
+    │
+    ▼
+يرجع Response لـ Postman
+لخلاصة: إنتِ فهمتي الفكرة الأساسية صح جدًا. الفرق الوحيد هو إن الـ Global Exception Handler لا يمنع الـ Exception ولا يصلحه، هو فقط يحوّل الـ Exception إلى HTTP Response احترافي ومنظم بدل الـ Response الافتراضي اللي Spring بيعمله. ودي من الحاجات اللي بتخلي الـ API شكله احترافي في أي مشروع حقيقي.
+service throws the exception
+
+والـ Exception يطلع لفوق في الـ Call Stack، وSpring هو اللي يوصله للـ Global Exception Handler.
+
+
+
+
+
+
+    package com.bank.minicorebanking.exception;
+
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+    import java.util.HashMap;
+    import java.util.Map;
+
+    @RestControllerAdvice
+    //get all the exceptions from the controller and service and send it back here
+
+    public class GlobalExceptionHandler {
+    //class that is responsible for all the project exceptions
+        @ExceptionHandler(RuntimeException.class)
+        //method that will run incase any run time error happended
+
+        public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+          //RuntimeException ex exception that have been throwen
+            //ResponseEntityhttp respose that will be send to the postman
+            //Map<String, String> simple json
+
+
+
+            Map<String, String> error = new HashMap<>();
+            //small object for the error massege
+            error.put("error", ex.getMessage());
+
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+            //HttpStatus.BAD_REQUEST wich means 400 bad request
+        }
+    }//"Spring, send this JSON with status code 400."

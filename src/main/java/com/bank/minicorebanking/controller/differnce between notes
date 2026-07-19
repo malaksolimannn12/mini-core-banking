@@ -1,0 +1,34 @@
+@RequestParam vs @RequestBody
+1.@RequestParam
+Use it when you need one or a few simple values.
+Client sends:
+
+GET /customers?id=5
+
+The URL contains:
+
+id=5
+
+Controller:
+
+@GetMapping("/customers")
+public Customer getCustomer(@RequestParam Long id) {
+    return customerService.getCustomer(id);
+}
+What happens?
+
+Spring reads:
+
+id = 5
+
+and puts it into:
+
+Long id
+2. @RequestBody
+reads from the body
+ussually used in post and put
+used in json
+Use it when you're sending an entire object.
+
+
+e tiny addition worth knowing: @RequestParam isn't limited to GET requests — you can use it with POST/PUT too (it just reads from the URL query string regardless of HTTP method). But your instinct is right: in practice, @RequestParam is most commonly paired with GET (simple lookups), and @RequestBody with POST/PUT (sending structured data).

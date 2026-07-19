@@ -1,0 +1,106 @@
+data transefer object
+public class Customer {
+
+    private Long id;
+    private String name;
+    private String email;
+    private Double balance;
+    private String password;
+}
+When a new customer registers, you might only want the user to provide:
+
+✅ name
+✅ email
+✅ password
+
+So your DTO would be:
+public class CustomerRequestDTO {
+
+    private String name;
+    private String email;
+    private String password;
+}
+}
+
+The user might try to send:
+{
+    "id": 100,
+    "name": "Malak",
+    "email": "malak@gmail.com",
+    "balance": 1000000,
+    "password": "123456"
+}
+But because your controller accepts a CustomerRequestDTO instead of a Customer, Spring only maps the fields that exist in the DTO.
+
+So effectively, your application only uses:
+
+{
+    "name": "Malak",
+    "email": "malak@gmail.com",
+    "password": "123456"
+}
+
+The id and balance are ignored because they are not part of the DTO.
+
+Then, inside your service, you create the entity yourself:
+
+Customer customer = new Customer();
+customer.setName(dto.getName());
+customer.setEmail(dto.getEmail());
+customer.setPassword(dto.getPassword());
+customer.setBalance(0.0); // Default balance
+
+The database then generates the id thats why the id is ignored
+dto is like a form  magine you're giving someone a paper form.
+
+                    Your database (the entity) has 10 fields, but your form only has 3 blanks to fill in.
+
+                    The user cannot fill in fields that aren't on the form, because your backend only reads the fields defined in the DTO.
+
+                    So, in one sentence:
+
+                    A DTO acts as a filter. It defines exactly which fields the client is allowed to send or receive, helping protect your application and keeping your API separate from your database structure.
+
+
+so in the dto layer we dublicate the html validation as the name should not be empty and we control only what we take from the user for example if the user puts his name and his phone and his balance and we only wants to save the the name and the phone on the db and we do not to take the balnce in the bakend
+
+The DTO has two main jobs:
+
+Control which fields the backend accepts from the user.
+Validate those fields on the backend.
+
+For example, suppose your HTML form has:
+
+Name
+Phone
+
+The user could ignore your HTML and send this instead using Postman:
+
+{
+  "name": "Malak",
+  "phone": "0123456789",
+    "balance": 1000000
+  }
+  public class CustomerRequestDTO {
+
+      @NotBlank
+      private String name;
+
+      @NotBlank
+      private String phone;
+  }
+
+  Notice there is no balance field.
+
+  When Spring converts the request into a CustomerRequestDTO, it only takes:
+
+  ✅ name
+  ✅ phone
+
+  The balance is not part of the DTO
+  , so your application doesn't use it. Then,
+  in your service, you decide what the balance should be, for example:
+  customer.setBalance(0.0);
+
+  The user cannot choose their own starting balance.
+DTO validation → Protects your backend. This is the one you must rely on.
