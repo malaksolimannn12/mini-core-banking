@@ -1,53 +1,66 @@
 # Mini Core Banking System
 
-Spring Boot skeleton for the Core Banking T24 application project (Customer, Account, Deposit, Withdraw, Transfer).
+A backend REST API simulating core banking operations, built as hands-on preparation for a Core Banking (T24) role.
 
-## Day 1 goal
-Get this running with zero errors before touching the database.
+## Tech Stack
 
-## Run it (Linux)
+- Java 17
+- Spring Boot 3.3.2
+- Spring Data JPA / Hibernate
+- MySQL
+- Maven
+- Lombok
 
-```bash
-java -version        # confirm JDK 17+
-cd mini-core-banking
-mvn clean install
-mvn spring-boot:run
-```
+## Features
 
-Then check it's alive:
+- Customer management - full CRUD
+- Account management - full CRUD, linked to customers
+- Banking operations - deposit, withdraw, transfer (with balance validation)
+- Transaction history - automatic logging of every operation
+- Interest calculation - percentage-based balance growth
+- Account statements - date-range transaction filtering
+- User accounts - registration and login, with role-based design (Admin / Customer)
+- Validation - Jakarta Bean Validation on all incoming data
+- Global exception handling - clean, structured JSON error responses
+- DTO layer - separates internal database structure from the public API
 
-```bash
-curl http://localhost:8080/health
-```
+## Architecture
 
-Expected response:
-```json
-{"status":"UP","service":"mini-core-banking"}
-```
+Controller to Service to Repository to Database
 
-## If it fails to start with a DB connection error
-You haven't installed/started MySQL yet — that's expected before Day 2. Either:
-1. Install MySQL and create a `bank` database (`CREATE DATABASE bank;`), or
-2. Temporarily uncomment the `spring.autoconfigure.exclude=...` line in
-   `src/main/resources/application.properties` to boot without a datasource,
-   then remove it once MySQL is ready.
+Each entity (Customer, Account, Transaction, User) follows this layered pattern, with dedicated Request/Response DTOs to control exactly what data is exposed.
 
-## Structure
-```
-src/main/java/com/bank/minicorebanking/
- ├── controller
- ├── service
- ├── repository
- ├── entity
- ├── dto
- ├── exception
- └── config
-```
+## Data Model
 
-## Next steps (per the study plan)
-- Day 2: connect MySQL/Oracle, create `Customer` entity + table
-- Day 3: `CustomerRepository`
-- Day 4: first REST API (`POST /customers`), test in Postman
-- Day 5: `Account` entity + CRUD
-- Day 6: Deposit / Withdraw
-- Day 7+: Transfer, Transaction history, validation, global exception handling
+Customer (1) - many Account (1) - many Transaction
+User - optional one-to-one - Customer
+
+## Getting Started
+
+1. Clone the repository
+2. Create a MySQL database (auto-created on first run if it doesn't exist)
+3. Update src/main/resources/application.properties with your MySQL credentials
+4. Run the app: mvn spring-boot:run
+5. The API will be available at http://localhost:8080
+
+## Key Endpoints
+
+POST /customers - Create a customer
+GET /customers - List all customers
+POST /accounts - Create an account
+POST /accounts/{id}/deposit - Deposit funds
+POST /accounts/{id}/withdraw - Withdraw funds
+POST /accounts/{fromId}/transfer - Transfer between accounts
+POST /accounts/{id}/interest - Apply interest
+GET /accounts/{id}/statement - Get transaction statement (date range)
+GET /transactions/account/{id} - View full transaction history
+POST /users/register - Register a new user
+POST /users/login - Log in
+
+## Roadmap
+
+- Full test coverage (Postman)
+- Password hashing / Spring Security integration
+- Role-based authorization
+- Oracle database migration
+- JBoss/WildFly deployment
