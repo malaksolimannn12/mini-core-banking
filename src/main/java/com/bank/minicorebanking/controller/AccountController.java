@@ -3,8 +3,11 @@ package com.bank.minicorebanking.controller;
 import com.bank.minicorebanking.dto.AccountRequestDTO;
 import com.bank.minicorebanking.dto.AccountResponseDTO;
 import com.bank.minicorebanking.dto.TransactionResponseDTO;
+import com.bank.minicorebanking.entity.User;
 import com.bank.minicorebanking.service.AccountService;
 import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -27,6 +30,13 @@ public class AccountController {
 
     @GetMapping
     public List<AccountResponseDTO> getAllAccounts() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof User user && user.getCustomer() != null) {
+            return service.getAccountsByCustomerId(user.getCustomer().getId());
+        }
+
         return service.getAllAccounts();
     }
 
@@ -71,5 +81,10 @@ public class AccountController {
             @RequestParam LocalDateTime start,
             @RequestParam LocalDateTime end) {
         return service.getStatement(id, start, end);
+    }
+
+    @PutMapping("/{id}/approve")
+    public AccountResponseDTO approveAccount(@PathVariable Long id) {
+        return service.approveAccount(id);
     }
 }

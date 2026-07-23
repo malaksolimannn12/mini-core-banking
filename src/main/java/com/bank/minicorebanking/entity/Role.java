@@ -1,7 +1,7 @@
 package com.bank.minicorebanking.entity;
-
 public enum Role {
     ADMIN,
+    MANAGER,
     CUSTOMER
 }
 //Good — quick check on this one.

@@ -11,7 +11,6 @@ import com.bank.minicorebanking.repository.AccountRepository;
 import com.bank.minicorebanking.repository.CustomerRepository;
 import com.bank.minicorebanking.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +47,7 @@ public class AccountService {
         account.setBalance(dto.getBalance());
         account.setAccountType(dto.getAccountType());
         account.setCustomer(customer);
+        account.setApproved(false);
 
         Account saved = repo.save(account);
         return convertToDTO(saved);
@@ -55,6 +55,13 @@ public class AccountService {
 
     public List<AccountResponseDTO> getAllAccounts() {
         return repo.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<AccountResponseDTO> getAccountsByCustomerId(Long customerId) {
+        return repo.findAll().stream()
+                .filter(a -> a.getCustomer() != null && a.getCustomer().getId().equals(customerId))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -89,6 +96,13 @@ public class AccountService {
         } else {
             repo.deleteById(id);
         }
+    }
+
+    public AccountResponseDTO approveAccount(Long id) {
+        Account acc = getAccountById(id);
+        acc.setApproved(true);
+        Account saved = repo.save(acc);
+        return convertToDTO(saved);
     }
 
     // ---- Private helpers: pure balance logic, no logging ----
@@ -169,6 +183,26 @@ public class AccountService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    // ---- DTO conversion ----
+
+    private AccountResponseDTO convertToDTO(Account account) {
+        List<TransactionSummaryDTO> transactionDTOs = account.getTransactions() == null
+                ? new ArrayList<>()
+                : account.getTransactions().stream()
+                  .map(t -> new TransactionSummaryDTO(t.getId(), t.getTransactionType(), t.getAmount(), t.getTimestamp()))
+                  .collect(Collectors.toList());
+
+        return new AccountResponseDTO(
+                account.getId(),
+                account.getAccountNumber(),
+                account.getBalance(),
+                account.getAccountType(),
+                account.getCustomer() != null ? account.getCustomer().getId() : null,
+                transactionDTOs
+        );
+    }
+}
 //Let's go through this one line by line.
 //
 //## Method signature
@@ -219,20 +253,3 @@ public class AccountService {
 //Does this make sense now? Want me to walk through `applyInterest` next, or something else?
     // ---- DTO conversion ----
 
-    private AccountResponseDTO convertToDTO(Account account) {
-        List<TransactionSummaryDTO> transactionDTOs = account.getTransactions() == null
-                ? new ArrayList<>()
-                : account.getTransactions().stream()
-                  .map(t -> new TransactionSummaryDTO(t.getId(), t.getTransactionType(), t.getAmount(), t.getTimestamp()))
-                  .collect(Collectors.toList());
-
-        return new AccountResponseDTO(
-                account.getId(),
-                account.getAccountNumber(),
-                account.getBalance(),
-                account.getAccountType(),
-                account.getCustomer() != null ? account.getCustomer().getId() : null,
-                transactionDTOs
-        );
-    }
-}

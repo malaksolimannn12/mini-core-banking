@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Core Banking</title>
+<style>
+  :root {
+    --navy: #0f2942;
+    --navy-light: #16405f;
+    --gold: #c9a35c;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1b2733;
+    --muted: #64748b;
+    --danger: #b3261e;
+    --success: #1e7d4a;
+    --border: #e2e5ea;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header h1 span { color: var(--gold); }
+  #session-info { font-size: 14px; color: #cbd5e1; display: flex; align-items: center; gap: 14px; }
+  #logout-btn { background: transparent; border: 1px solid #cbd5e1; color: #cbd5e1; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+  nav { display: flex; gap: 4px; background: var(--navy-light); padding: 0 32px; flex-wrap: wrap; }
+  nav button { background: none; border: none; color: #cbd5e1; padding: 12px 16px; cursor: pointer; font-size: 13px; border-bottom: 3px solid transparent; }
+  nav button.active { color: white; border-bottom: 3px solid var(--gold); }
+  main { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .card h2 { margin-top: 0; font-size: 16px; color: var(--navy); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  form.inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  input, select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; min-width: 140px; }
+  button.action { background: var(--navy); color: white; border: none; padding: 9px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+  button.action:hover { background: var(--navy-light); }
+  button.action.secondary { background: white; color: var(--navy); border: 1px solid var(--navy); }
+  button.action.small { padding: 5px 10px; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag.deposit, .tag.interest, .tag.transfer_in, .tag.approved { background: #dcf5e6; color: var(--success); }
+  .tag.withdraw, .tag.transfer_out, .tag.pending { background: #fde3e1; color: var(--danger); }
+  .tag.role { background: #e0e7f5; color: var(--navy); }
+  #msg { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; display: none; }
+  #msg.ok { background: #dcf5e6; color: var(--success); display: block; }
+  #msg.err { background: #fde3e1; color: var(--danger); display: block; }
+  .muted { color: var(--muted); font-size: 13px; }
+  #login-screen { max-width: 400px; margin: 70px auto; background: white; border: 1px solid var(--border); border-radius: 10px; padding: 32px; }
+  #login-screen h1 { color: var(--navy); font-size: 20px; text-align: center; }
+  #login-screen .field { margin-bottom: 14px; }
+  #login-screen input, #login-screen select { width: 100%; }
+  #login-screen button { width: 100%; margin-top: 6px; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h1>Mini Core <span style="color:var(--gold)">Banking</span></h1>
+  <p class="muted" style="text-align:center;">Sign in to continue</p>
+  <div id="login-msg" style="display:none; background:#fde3e1; color:var(--danger); padding:8px 12px; border-radius:5px; font-size:13px; margin-bottom:10px;"></div>
+  <div class="field">
+    <label>Username or Email</label>
+    <input id="login-username" type="text" placeholder="admin@bank.com or customer1">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input id="login-password" type="password" placeholder="password">
+  </div>
+  <button class="action" onclick="login()">Sign In</button>
+  <p class="muted" style="margin-top:16px;">Admins/Managers log in with email. Customers log in with username.</p>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Mini Core <span>Banking</span></h1>
+    <div id="session-info">
+      <span id="user-info"></span>
+      <button id="logout-btn" onclick="logout()">Log out</button>
+    </div>
+  </header>
+  <nav id="nav-bar"></nav>
+
+  <main>
+    <div id="msg"></div>
+
+    <div class="panel active" id="panel-dashboard">
+      <div class="card">
+        <h2>Overview</h2>
+        <p><strong id="stat-customers">0</strong> customers &nbsp;|&nbsp;
+           <strong id="stat-accounts">0</strong> accounts</p>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-customers">
+      <div class="card" id="create-customer-card">
+        <h2>Create Customer</h2>
+        <form class="inline" onsubmit="event.preventDefault(); createCustomer();">
+          <div class="field"><label>Full Name</label><input id="cust-name" type="text" required></div>
+          <div class="field"><label>Email</label><input id="cust-email" type="email" required></div>
+          <div class="field"><label>Phone</label><input id="cust-phone" type="text" required></div>
+          <button class="action" type="submit">Create</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>All Customers</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Accounts</th></tr></thead>
+          <tbody id="customers-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-accounts">
+      <div class="card" id="create-account-card">
+        <h2>Create Account</h2>
+        <form class="inline" onsubmit="event.preventDefault(); createAccount();">
+          <div class="field"><label>Account Number</label><input id="acc-number" type="text" required></div>
+          <div class="field"><label>Initial Balance</label><input id="acc-balance" type="number" step="0.01" value="0" required></div>
+          <div class="field"><label>Type</label>
+            <select id="acc-type"><option value="SAVINGS">SAVINGS</option><option value="CURRENT">CURRENT</option></select>
+          </div>
+          <div class="field"><label>Customer ID</label><input id="acc-customer" type="number" required></div>
+          <button class="action" type="submit">Create</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>All Accounts</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Number</th><th>Balance</th><th>Type</th><th>Customer ID</th><th>Status</th><th></th></tr></thead>
+          <tbody id="accounts-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-operations">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Deposit</h2>
+          <form class="inline" onsubmit="event.preventDefault(); deposit();">
+            <div class="field"><label>Account ID</label><input id="dep-id" type="number" required></div>
+            <div class="field"><label>Amount</label><input id="dep-amount" type="number" step="0.01" required></div>
+            <button class="action" type="submit">Deposit</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Withdraw</h2>
+          <form class="inline" onsubmit="event.preventDefault(); withdraw();">
+            <div class="field"><label>Account ID</label><input id="wd-id" type="number" required></div>
+            <div class="field"><label>Amount</label><input id="wd-amount" type="number" step="0.01" required></div>
+            <button class="action" type="submit">Withdraw</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Transfer Between Accounts</h2>
+        <form class="inline" onsubmit="event.preventDefault(); transfer();">
+          <div class="field"><label>From Account ID</label><input id="tr-from" type="number" required></div>
+          <div class="field"><label>To Account ID</label><input id="tr-to" type="number" required></div>
+          <div class="field"><label>Amount</label><input id="tr-amount" type="number" step="0.01" required></div>
+          <button class="action" type="submit">Transfer</button>
+        </form>
+      </div>
+      <div class="card" id="interest-card">
+        <h2>Apply Interest</h2>
+        <form class="inline" onsubmit="event.preventDefault(); applyInterest();">
+          <div class="field"><label>Account ID</label><input id="int-id" type="number" required></div>
+          <div class="field"><label>Rate (%)</label><input id="int-rate" type="number" step="0.01" required></div>
+          <button class="action" type="submit">Apply</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-statement">
+      <div class="card">
+        <h2>Account Statement</h2>
+        <form class="inline" onsubmit="event.preventDefault(); loadStatement();">
+          <div class="field"><label>Account ID</label><input id="stmt-id" type="number" required></div>
+          <div class="field"><label>Start</label><input id="stmt-start" type="datetime-local" required></div>
+          <div class="field"><label>End</label><input id="stmt-end" type="datetime-local" required></div>
+          <button class="action" type="submit">Get Statement</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Full Transaction History (by account)</h2>
+        <form class="inline" onsubmit="event.preventDefault(); loadHistory();">
+          <div class="field"><label>Account ID</label><input id="hist-id" type="number" required></div>
+          <button class="action secondary" type="submit">Load History</button>
+        </form>
+        <table style="margin-top:14px;">
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Timestamp</th></tr></thead>
+          <tbody id="statement-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-admins">
+      <div class="card">
+        <h2>Create Admin</h2>
+        <form class="inline" onsubmit="event.preventDefault(); createAdmin();">
+          <div class="field"><label>Full Name</label><input id="admin-name" type="text" required></div>
+          <div class="field"><label>Email</label><input id="admin-email" type="email" required></div>
+          <div class="field"><label>Password</label><input id="admin-password" type="password" required></div>
+          <button class="action" type="submit">Create</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>All Admins</h2>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead><tbody id="admins-table"></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-managers">
+      <div class="card">
+        <h2>Create Manager</h2>
+        <form class="inline" onsubmit="event.preventDefault(); createManager();">
+          <div class="field"><label>Full Name</label><input id="mgr-name" type="text" required></div>
+          <div class="field"><label>Email</label><input id="mgr-email" type="email" required></div>
+          <div class="field"><label>Password</label><input id="mgr-password" type="password" required></div>
+          <button class="action" type="submit">Create</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>All Managers</h2>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead><tbody id="managers-table"></tbody></table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = 'http://localhost:8080';
+let currentRole = null;
+
+const ALL_PANELS = [
+  { key: 'dashboard', label: 'Dashboard', roles: ['ADMIN','MANAGER','CUSTOMER'] },
+  { key: 'customers', label: 'Customers', roles: ['ADMIN','MANAGER'] },
+  { key: 'accounts', label: 'Accounts', roles: ['ADMIN','MANAGER','CUSTOMER'] },
+  { key: 'operations', label: 'Deposit / Withdraw / Transfer', roles: ['ADMIN','MANAGER','CUSTOMER'] },
+  { key: 'statement', label: 'Statement', roles: ['ADMIN','MANAGER','CUSTOMER'] },
+  { key: 'admins', label: 'Admins', roles: ['ADMIN'] },
+  { key: 'managers', label: 'Managers', roles: ['ADMIN'] }
+];
+
+function buildNav() {
+  const nav = document.getElementById('nav-bar');
+  nav.innerHTML = '';
+  ALL_PANELS.filter(p => p.roles.includes(currentRole)).forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
+    btn.dataset.panel = p.key;
+    btn.textContent = p.label;
+    btn.addEventListener('click', () => switchPanel(p.key));
+    nav.appendChild(btn);
+  });
+
+  const isStaff = currentRole === 'ADMIN' || currentRole === 'MANAGER';
+  document.getElementById('create-customer-card').style.display = isStaff ? 'block' : 'none';
+  document.getElementById('create-account-card').style.display = isStaff ? 'block' : 'none';
+  document.getElementById('interest-card').style.display = isStaff ? 'block' : 'none';
+}
+
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  const btn = document.querySelector('.nav-btn[data-panel="' + name + '"]');
+  if (btn) btn.classList.add('active');
+}
+
+function showMessage(text, isError) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = isError ? 'err' : 'ok';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function apiCall(path, method = 'GET', body = null) {
+  const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+  if (body) options.body = JSON.stringify(body);
+  const res = await fetch(API + path, options);
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const errorMsg = (data && (data.error || Object.values(data)[0])) || 'Request failed (' + res.status + ')';
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
+async function login() {
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const loginMsg = document.getElementById('login-msg');
+  loginMsg.style.display = 'none';
+  try {
+    const result = await apiCall('/auth/login', 'POST', { username, password });
+    const authorities = result.role || '';
+    let role = 'CUSTOMER';
+    if (authorities.includes('ADMIN')) role = 'ADMIN';
+    else if (authorities.includes('MANAGER')) role = 'MANAGER';
+    currentRole = role;
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-info').textContent = result.username + ' (' + role + ')';
+
+    buildNav();
+    loadDashboard();
+  } catch (e) {
+    loginMsg.textContent = 'Invalid credentials';
+    loginMsg.style.display = 'block';
+  }
+}
+
+async function logout() {
+  try { await apiCall('/auth/logout', 'POST'); } catch (e) {}
+  location.reload();
+}
+
+async function loadDashboard() {
+  try {
+    const accounts = await apiCall('/accounts');
+    document.getElementById('stat-accounts').textContent = accounts.length;
+    renderAccounts(accounts);
+
+    if (currentRole !== 'CUSTOMER') {
+      const customers = await apiCall('/customers');
+      document.getElementById('stat-customers').textContent = customers.length;
+      renderCustomers(customers);
+    }
+    if (currentRole === 'ADMIN') {
+      const admins = await apiCall('/admins');
+      renderAdmins(admins);
+      const managers = await apiCall('/managers');
+      renderManagers(managers);
+    }
+  } catch (e) {
+    showMessage(e.message, true);
+  }
+}
+
+function renderCustomers(list) {
+  document.getElementById('customers-table').innerHTML = list.map(c => `
+    <tr><td>${c.id}</td><td>${c.fullName}</td><td>${c.email}</td><td>${c.phoneNumber}</td>
+    <td>${(c.accountNumbers || []).join(', ') || '-'}</td></tr>`).join('');
+}
+
+async function createCustomer() {
+  try {
+    const dto = {
+      fullName: document.getElementById('cust-name').value,
+      email: document.getElementById('cust-email').value,
+      phoneNumber: document.getElementById('cust-phone').value
+    };
+    await apiCall('/customers', 'POST', dto);
+    showMessage('Customer created successfully.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+function renderAccounts(list) {
+  const isStaff = currentRole === 'ADMIN' || currentRole === 'MANAGER';
+  document.getElementById('accounts-table').innerHTML = list.map(a => `
+    <tr>
+      <td>${a.id}</td><td>${a.accountNumber}</td><td>${Number(a.balance).toFixed(2)}</td>
+      <td>${a.accountType}</td><td>${a.customerId ?? '-'}</td>
+      <td><span class="tag ${a.approved ? 'approved' : 'pending'}">${a.approved ? 'APPROVED' : 'PENDING'}</span></td>
+      <td>${isStaff && !a.approved ? `<button class="action small" onclick="approveAccount(${a.id})">Approve</button>` : ''}</td>
+    </tr>`).join('');
+}
+
+async function createAccount() {
+  try {
+    const dto = {
+      accountNumber: document.getElementById('acc-number').value,
+      balance: parseFloat(document.getElementById('acc-balance').value),
+      accountType: document.getElementById('acc-type').value,
+      customerId: parseInt(document.getElementById('acc-customer').value)
+    };
+    await apiCall('/accounts', 'POST', dto);
+    showMessage('Account created (pending approval).');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function approveAccount(id) {
+  try {
+    await apiCall(`/accounts/${id}/approve`, 'PUT');
+    showMessage('Account approved.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function deposit() {
+  try {
+    const id = document.getElementById('dep-id').value;
+    const amount = document.getElementById('dep-amount').value;
+    await apiCall(`/accounts/${id}/deposit?amount=${amount}`, 'POST');
+    showMessage('Deposit successful.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function withdraw() {
+  try {
+    const id = document.getElementById('wd-id').value;
+    const amount = document.getElementById('wd-amount').value;
+    await apiCall(`/accounts/${id}/withdraw?amount=${amount}`, 'POST');
+    showMessage('Withdrawal successful.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function transfer() {
+  try {
+    const from = document.getElementById('tr-from').value;
+    const to = document.getElementById('tr-to').value;
+    const amount = document.getElementById('tr-amount').value;
+    await apiCall(`/accounts/${from}/transfer?toAccountId=${to}&amount=${amount}`, 'POST');
+    showMessage('Transfer successful.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function applyInterest() {
+  try {
+    const id = document.getElementById('int-id').value;
+    const rate = document.getElementById('int-rate').value;
+    await apiCall(`/accounts/${id}/interest?ratePercent=${rate}`, 'POST');
+    showMessage('Interest applied.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+function renderTransactions(list) {
+  document.getElementById('statement-table').innerHTML = list.map(t => `
+    <tr><td>${t.id}</td><td><span class="tag ${t.transactionType.toLowerCase()}">${t.transactionType}</span></td>
+    <td>${Number(t.amount).toFixed(2)}</td><td>${t.timestamp}</td></tr>`).join('');
+}
+
+async function loadStatement() {
+  try {
+    const id = document.getElementById('stmt-id').value;
+    const start = document.getElementById('stmt-start').value;
+    const end = document.getElementById('stmt-end').value;
+    const list = await apiCall(`/accounts/${id}/statement?start=${start}:00&end=${end}:00`);
+    renderTransactions(list);
+    showMessage('Statement loaded (' + list.length + ' transactions).');
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function loadHistory() {
+  try {
+    const id = document.getElementById('hist-id').value;
+    const list = await apiCall(`/transactions/account/${id}`);
+    renderTransactions(list);
+    showMessage('History loaded (' + list.length + ' transactions).');
+  } catch (e) { showMessage(e.message, true); }
+}
+
+function renderAdmins(list) {
+  document.getElementById('admins-table').innerHTML = list.map(a => `
+    <tr><td>${a.id}</td><td>${a.fullName}</td><td>${a.email}</td></tr>`).join('');
+}
+function renderManagers(list) {
+  document.getElementById('managers-table').innerHTML = list.map(m => `
+    <tr><td>${m.id}</td><td>${m.fullName}</td><td>${m.email}</td></tr>`).join('');
+}
+
+async function createAdmin() {
+  try {
+    const dto = {
+      fullName: document.getElementById('admin-name').value,
+      email: document.getElementById('admin-email').value,
+      password: document.getElementById('admin-password').value
+    };
+    await apiCall('/admins', 'POST', dto);
+    showMessage('Admin created.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+async function createManager() {
+  try {
+    const dto = {
+      fullName: document.getElementById('mgr-name').value,
+      email: document.getElementById('mgr-email').value,
+      password: document.getElementById('mgr-password').value
+    };
+    await apiCall('/managers', 'POST', dto);
+    showMessage('Manager created.');
+    loadDashboard();
+  } catch (e) { showMessage(e.message, true); }
+}
+
+document.getElementById('login-password').addEventListener('keypress', e => {
+  if (e.key === 'Enter') login();
+});
+</script>
+
+</body>
+</html>

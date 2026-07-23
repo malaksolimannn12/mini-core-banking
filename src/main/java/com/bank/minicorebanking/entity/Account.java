@@ -21,7 +21,7 @@ public class Account {
     private String accountNumber;
 
     private Double balance;
-
+    private Boolean approved = false;
     private String accountType;
 
     @ManyToOne
